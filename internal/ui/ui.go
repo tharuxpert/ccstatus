@@ -145,34 +145,35 @@ func WarningMessage(title, message string) {
 
 // InfoBox prints an info box with a message
 func InfoBox(lines ...string) {
+	const boxWidth = 50
 	fmt.Println()
-	Info.Println("  ┌" + strings.Repeat("─", 50) + "┐")
+	Info.Println("  ┌" + strings.Repeat("─", boxWidth+2) + "┐")
 	for _, line := range lines {
-		padding := 50 - len(line)
-		if padding < 0 {
-			padding = 0
-			line = line[:47] + "..."
+		if len(line) > boxWidth {
+			line = line[:boxWidth-3] + "..."
 		}
+		padding := boxWidth - len(line)
 		Info.Printf("  │ %s%s │\n", line, strings.Repeat(" ", padding))
 	}
-	Info.Println("  └" + strings.Repeat("─", 50) + "┘")
+	Info.Println("  └" + strings.Repeat("─", boxWidth+2) + "┘")
 }
 
 // CodeBlock prints a styled code/config block
 func CodeBlock(content string) {
+	const boxWidth = 50
 	lines := strings.Split(content, "\n")
-	Dim.Println("  ┌" + strings.Repeat("─", 52) + "┐")
+	Dim.Println("  ┌" + strings.Repeat("─", boxWidth+2) + "┐")
 	for _, line := range lines {
-		if len(line) > 50 {
-			line = line[:47] + "..."
+		if len(line) > boxWidth {
+			line = line[:boxWidth-3] + "..."
 		}
-		padding := 50 - len(line)
+		padding := boxWidth - len(line)
 		Dim.Print("  │ ")
 		Info.Print(line)
 		fmt.Print(strings.Repeat(" ", padding))
 		Dim.Println(" │")
 	}
-	Dim.Println("  └" + strings.Repeat("─", 52) + "┘")
+	Dim.Println("  └" + strings.Repeat("─", boxWidth+2) + "┘")
 }
 
 // Divider prints a horizontal divider
