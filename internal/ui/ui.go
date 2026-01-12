@@ -3,14 +3,41 @@ package ui
 
 import (
 	"fmt"
+	"io"
 	"strings"
 	"text/template"
 	"time"
 
 	"github.com/briandowns/spinner"
+	"github.com/chzyer/readline"
 	"github.com/fatih/color"
 	"github.com/manifoldco/promptui"
 )
+
+// bellSkipper wraps an io.WriteCloser to skip bell characters
+type bellSkipper struct {
+	io.WriteCloser
+}
+
+func (b *bellSkipper) Write(data []byte) (int, error) {
+	// Filter out bell character (ASCII 7)
+	filtered := make([]byte, 0, len(data))
+	for _, c := range data {
+		if c != 7 { // Skip bell character
+			filtered = append(filtered, c)
+		}
+	}
+	if len(filtered) == 0 {
+		return len(data), nil
+	}
+	_, err := b.WriteCloser.Write(filtered)
+	return len(data), err
+}
+
+// newBellSkipper creates a readline config with bell disabled
+func newBellSkipper() io.WriteCloser {
+	return &bellSkipper{readline.Stdout}
+}
 
 // Colors
 var (
@@ -222,6 +249,7 @@ func Confirm(prompt string) bool {
 		Templates:    templates,
 		HideSelected: false,
 		HideHelp:     false,
+		Stdout:       newBellSkipper(),
 	}
 
 	idx, _, err := sel.Run()
@@ -263,6 +291,7 @@ func PromptChoice(prompt string, options []string) int {
 		HideSelected: false,
 		HideHelp:     false,
 		Size:         len(options),
+		Stdout:       newBellSkipper(),
 	}
 
 	idx, _, err := sel.Run()
