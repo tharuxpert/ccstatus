@@ -213,6 +213,7 @@ func Confirm(prompt string) bool {
 		Active:   fmt.Sprintf("  %s {{ . | cyan | bold }}", IconArrow),
 		Inactive: "    {{ . | faint }}",
 		Selected: fmt.Sprintf("  %s {{ . | green }}", IconCheck),
+		Help:     Dim.Sprint("  Use ↑/↓ arrows to move, Enter to select"),
 	}
 
 	sel := promptui.Select{
@@ -220,7 +221,7 @@ func Confirm(prompt string) bool {
 		Items:        items,
 		Templates:    templates,
 		HideSelected: false,
-		HideHelp:     true,
+		HideHelp:     false,
 	}
 
 	idx, _, err := sel.Run()
@@ -251,6 +252,7 @@ func PromptChoice(prompt string, options []string) int {
 		Active:   fmt.Sprintf("  %s {{ . | cyan | bold }}", IconArrow),
 		Inactive: "    {{ . | faint }}",
 		Selected: fmt.Sprintf("  %s {{ . | green }}", IconCheck),
+		Help:     Dim.Sprint("  Use ↑/↓ arrows to move, Enter to select"),
 		FuncMap:  funcMap,
 	}
 
@@ -259,7 +261,7 @@ func PromptChoice(prompt string, options []string) int {
 		Items:        options,
 		Templates:    templates,
 		HideSelected: false,
-		HideHelp:     true,
+		HideHelp:     false,
 		Size:         len(options),
 	}
 
