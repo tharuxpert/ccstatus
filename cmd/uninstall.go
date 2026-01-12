@@ -103,9 +103,9 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 		ui.StatusOK("Backup found", backupPath)
 
 		options := []string{
-			ui.Success.Sprint("Restore from backup") + ui.Dim.Sprint(" (recommended)"),
+			"Restore from backup (recommended)",
 			"Remove statusline configuration only",
-			ui.Dim.Sprint("Cancel"),
+			"Cancel",
 		}
 
 		choice := ui.PromptChoice("How would you like to proceed?", options)

@@ -4,10 +4,12 @@ package ui
 import (
 	"fmt"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/briandowns/spinner"
 	"github.com/fatih/color"
+	"github.com/manifoldco/promptui"
 )
 
 // Colors
@@ -199,42 +201,74 @@ func NewProgressSpinner(message string) *spinner.Spinner {
 	return s
 }
 
-// Confirm prompts the user for yes/no confirmation with styled output
+// Confirm prompts the user for yes/no confirmation with interactive selector
 func Confirm(prompt string) bool {
 	fmt.Println()
-	Warning.Printf("  %s ", IconWarning)
-	Bold.Print(prompt)
-	Dim.Print(" [y/N]: ")
 
-	var response string
-	fmt.Scanln(&response)
+	items := []string{"Yes", "No"}
 
-	response = strings.ToLower(strings.TrimSpace(response))
-	return response == "y" || response == "yes"
+	// Custom templates for styling
+	templates := &promptui.SelectTemplates{
+		Label:    fmt.Sprintf("  %s {{ . | bold }}", IconWarning),
+		Active:   fmt.Sprintf("  %s {{ . | cyan | bold }}", IconArrow),
+		Inactive: "    {{ . | faint }}",
+		Selected: fmt.Sprintf("  %s {{ . | green }}", IconCheck),
+	}
+
+	sel := promptui.Select{
+		Label:        prompt,
+		Items:        items,
+		Templates:    templates,
+		HideSelected: false,
+		HideHelp:     true,
+	}
+
+	idx, _, err := sel.Run()
+	if err != nil {
+		return false
+	}
+
+	return idx == 0 // "Yes" is at index 0
 }
 
-// PromptChoice prompts the user to select from numbered options
+// PromptChoice prompts the user to select from options with interactive selector
 func PromptChoice(prompt string, options []string) int {
 	fmt.Println()
-	Bold.Println("  " + prompt)
-	fmt.Println()
 
-	for i, opt := range options {
-		Info.Printf("    %d. ", i+1)
-		fmt.Println(opt)
+	// Custom templates for styling
+	funcMap := template.FuncMap{
+		"cyan":    func(s string) string { return Info.Sprint(s) },
+		"green":   func(s string) string { return Success.Sprint(s) },
+		"yellow":  func(s string) string { return Warning.Sprint(s) },
+		"red":     func(s string) string { return Error.Sprint(s) },
+		"bold":    func(s string) string { return Bold.Sprint(s) },
+		"faint":   func(s string) string { return Dim.Sprint(s) },
+		"primary": func(s string) string { return Primary.Sprint(s) },
 	}
-	fmt.Println()
 
-	Dim.Print("  Enter choice: ")
-
-	var choice int
-	for {
-		fmt.Scan(&choice)
-		if choice >= 1 && choice <= len(options) {
-			return choice
-		}
-		Error.Printf("  Invalid choice. Enter 1-%d: ", len(options))
+	templates := &promptui.SelectTemplates{
+		Label:    fmt.Sprintf("  %s {{ . | bold }}", IconDiamond),
+		Active:   fmt.Sprintf("  %s {{ . | cyan | bold }}", IconArrow),
+		Inactive: "    {{ . | faint }}",
+		Selected: fmt.Sprintf("  %s {{ . | green }}", IconCheck),
+		FuncMap:  funcMap,
 	}
+
+	sel := promptui.Select{
+		Label:        prompt,
+		Items:        options,
+		Templates:    templates,
+		HideSelected: false,
+		HideHelp:     true,
+		Size:         len(options),
+	}
+
+	idx, _, err := sel.Run()
+	if err != nil {
+		return 1 // Default to first option on error
+	}
+
+	return idx + 1 // Return 1-indexed for compatibility
 }
 
 // PrintKeyValue prints a key-value pair with styling
