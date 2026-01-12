@@ -1,16 +1,13 @@
 package cmd
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
-	"os"
-	"strings"
 	"time"
 
 	"ccstatus/internal/config"
+	"ccstatus/internal/ui"
 
-	"github.com/briandowns/spinner"
 	"github.com/spf13/cobra"
 )
 
@@ -29,142 +26,162 @@ You will be asked to confirm before any changes are made.`,
 }
 
 func runInstall(cmd *cobra.Command, args []string) error {
-	fmt.Println("ccstatus installer")
-	fmt.Println()
+	ui.CompactTitle("ccstatus install")
 
-	// Step 1: Check if config exists
-	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-	s.Suffix = " Checking Claude Code configuration..."
+	// Step 1: Check configuration
+	s := ui.NewSpinner("Detecting Claude Code configuration...")
 	s.Start()
+	time.Sleep(300 * time.Millisecond) // Brief pause for visual feedback
 
 	configPath, err := config.GetConfigPath()
 	if err != nil {
 		s.Stop()
-		return fmt.Errorf("failed to determine config path: %w", err)
+		ui.ErrorMessage("Failed to determine config path", err.Error())
+		return nil
 	}
 
 	exists, err := config.ConfigExists()
 	if err != nil {
 		s.Stop()
-		return fmt.Errorf("failed to check config: %w", err)
+		ui.ErrorMessage("Failed to check config", err.Error())
+		return nil
 	}
 
 	s.Stop()
 
-	if !exists {
-		fmt.Printf("  Config location: %s\n", configPath)
-		fmt.Println("  Status: Not found (will be created)")
-	} else {
-		fmt.Printf("  Config location: %s\n", configPath)
-		fmt.Println("  Status: Found")
-	}
+	// Show config status
+	fmt.Println()
+	ui.Bold.Println("  Configuration")
+	ui.Divider()
 	fmt.Println()
 
+	ui.PrintPath("Location", configPath)
+	if exists {
+		ui.StatusOK("Config file", "Found")
+	} else {
+		ui.StatusInfo("Config file", "Will be created")
+	}
+
 	// Step 2: Read current settings
-	s.Suffix = " Reading current settings..."
+	s = ui.NewSpinner("Reading current settings...")
 	s.Start()
+	time.Sleep(200 * time.Millisecond)
 
 	settings, err := config.ReadSettings()
 	if err != nil {
 		s.Stop()
-		return fmt.Errorf("failed to read settings: %w", err)
+		ui.ErrorMessage("Failed to read settings", err.Error())
+		return nil
 	}
 
 	s.Stop()
 
 	// Step 3: Check if already configured
 	if config.IsStatuslineConfigured(settings) {
-		fmt.Println("  ccstatus is already configured as the statusline command.")
-		fmt.Println("  No changes needed.")
+		ui.SuccessMessage("Already configured!", "ccstatus is already set as the statusline command.")
+		fmt.Println()
+		ui.Dim.Println("  No changes needed.")
+		fmt.Println()
 		return nil
 	}
 
 	// Check if another statusline is configured
 	currentCmd := config.GetStatuslineCommand(settings)
 	if currentCmd != "" {
-		fmt.Printf("  Current statusline command: %s\n", currentCmd)
 		fmt.Println()
+		ui.StatusWarning("Existing configuration", "")
+		ui.PrintKeyValue("Current command", currentCmd)
 	}
 
 	// Step 4: Show what will change
-	fmt.Println("The following changes will be made:")
+	fmt.Println()
+	ui.Bold.Println("  Changes to be made")
+	ui.Divider()
 	fmt.Println()
 
+	stepNum := 1
 	if exists {
-		fmt.Println("  1. Create a backup of your current settings")
+		ui.Step(stepNum, "Create a backup of current settings")
+		stepNum++
 	}
 
 	if currentCmd != "" {
-		fmt.Printf("  2. Replace statusline command: %s -> ccstatus\n", currentCmd)
+		// Another command is configured, show replacement
+		ui.Step(stepNum, fmt.Sprintf("Update statusLine.command: %s %s %s",
+			ui.Error.Sprint(currentCmd),
+			ui.Dim.Sprint(ui.IconArrow),
+			ui.Success.Sprint("ccstatus")))
+	} else if config.HasStatuslineObject(settings) {
+		// statusLine exists but command is empty/missing
+		ui.Step(stepNum, "Set statusLine.command:")
+		fmt.Println()
+		ui.Dim.Println("     Existing statusLine object will be preserved.")
+		ui.Dim.Print("     Setting: ")
+		ui.Info.Println("\"command\": \"ccstatus\"")
 	} else {
-		fmt.Println("  2. Add statusline configuration:")
+		// No statusLine object, will create new one
+		ui.Step(stepNum, "Add statusLine configuration:")
+		fmt.Println()
 		preview := map[string]any{
-			"statusline": map[string]string{
+			"statusLine": map[string]string{
 				"command": "ccstatus",
 			},
 		}
-		previewJSON, _ := json.MarshalIndent(preview, "     ", "  ")
-		fmt.Printf("     %s\n", string(previewJSON))
+		previewJSON, _ := json.MarshalIndent(preview, "", "  ")
+		ui.CodeBlock(string(previewJSON))
 	}
-	fmt.Println()
 
 	// Step 5: Ask for confirmation
-	if !confirm("Do you want to proceed?") {
-		fmt.Println("Installation cancelled.")
+	if !ui.Confirm("Apply these changes?") {
+		fmt.Println()
+		ui.WarningMessage("Installation cancelled", "No changes were made.")
+		fmt.Println()
 		return nil
 	}
-	fmt.Println()
 
 	// Step 6: Create backup
+	fmt.Println()
 	if exists {
-		s.Suffix = " Creating backup..."
+		s = ui.NewProgressSpinner("Creating backup...")
 		s.Start()
+		time.Sleep(300 * time.Millisecond)
 
 		backupPath, err := config.CreateBackup()
 		if err != nil {
 			s.Stop()
-			return fmt.Errorf("failed to create backup: %w", err)
+			ui.ErrorMessage("Failed to create backup", err.Error())
+			return nil
 		}
 
 		s.Stop()
-		fmt.Printf("  Backup created: %s\n", backupPath)
+		ui.StatusOK("Backup created", backupPath)
 	}
 
 	// Step 7: Update settings
-	s.Suffix = " Updating configuration..."
+	s = ui.NewProgressSpinner("Updating configuration...")
 	s.Start()
+	time.Sleep(300 * time.Millisecond)
 
 	config.SetStatuslineCommand(settings, "ccstatus")
 
 	if err := config.WriteSettings(settings); err != nil {
 		s.Stop()
-		return fmt.Errorf("failed to write settings: %w", err)
+		ui.ErrorMessage("Failed to write settings", err.Error())
+		return nil
 	}
 
 	s.Stop()
-	fmt.Println("  Configuration updated successfully.")
-	fmt.Println()
+	ui.StatusOK("Configuration updated", "")
 
 	// Step 8: Success message
-	fmt.Println("Installation complete!")
+	ui.SuccessMessage("Installation complete!", "")
 	fmt.Println()
-	fmt.Println("ccstatus is now configured as your Claude Code statusline.")
-	fmt.Println("Restart Claude Code to see the changes.")
+	ui.InfoBox(
+		"ccstatus is now your Claude Code statusline.",
+		"",
+		"Restart Claude Code to see the changes.",
+	)
+	fmt.Println()
 
 	return nil
-}
-
-// confirm prompts the user for a yes/no confirmation
-func confirm(prompt string) bool {
-	reader := bufio.NewReader(os.Stdin)
-
-	fmt.Printf("%s [y/N]: ", prompt)
-
-	response, err := reader.ReadString('\n')
-	if err != nil {
-		return false
-	}
-
-	response = strings.TrimSpace(strings.ToLower(response))
-	return response == "y" || response == "yes"
 }

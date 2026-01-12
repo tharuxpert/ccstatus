@@ -205,9 +205,12 @@ func RestoreFromBackup(backupPath string) error {
 	return nil
 }
 
+// StatusLineKey is the key used in Claude Code settings
+const StatusLineKey = "statusLine"
+
 // GetStatuslineCommand returns the current statusline command if configured
 func GetStatuslineCommand(settings Settings) string {
-	statusline, ok := settings["statusline"]
+	statusline, ok := settings[StatusLineKey]
 	if !ok {
 		return ""
 	}
@@ -226,18 +229,77 @@ func GetStatuslineCommand(settings Settings) string {
 }
 
 // SetStatuslineCommand sets the statusline command in settings
+// It preserves any other fields in the statusLine object
 func SetStatuslineCommand(settings Settings, command string) {
-	settings["statusline"] = map[string]any{
-		"command": command,
+	statusline, ok := settings[StatusLineKey]
+	if !ok {
+		// No statusLine object exists, create one
+		settings[StatusLineKey] = map[string]any{
+			"command": command,
+		}
+		return
 	}
+
+	// statusLine exists, try to update it
+	statuslineMap, ok := statusline.(map[string]any)
+	if !ok {
+		// statusLine exists but is not a map, replace it
+		settings[StatusLineKey] = map[string]any{
+			"command": command,
+		}
+		return
+	}
+
+	// Update only the command field, preserving other fields
+	statuslineMap["command"] = command
 }
 
-// RemoveStatusline removes the statusline configuration from settings
+// RemoveStatusline removes only the command from statusLine configuration
+// It preserves other statusLine settings; removes the object entirely if empty
 func RemoveStatusline(settings Settings) {
-	delete(settings, "statusline")
+	statusline, ok := settings[StatusLineKey]
+	if !ok {
+		return
+	}
+
+	statuslineMap, ok := statusline.(map[string]any)
+	if !ok {
+		// Not a map, just delete the whole thing
+		delete(settings, StatusLineKey)
+		return
+	}
+
+	// Remove only the command key
+	delete(statuslineMap, "command")
+
+	// If statusLine object is now empty, remove it entirely
+	if len(statuslineMap) == 0 {
+		delete(settings, StatusLineKey)
+	}
 }
 
 // IsStatuslineConfigured checks if ccstatus is already configured
 func IsStatuslineConfigured(settings Settings) bool {
 	return GetStatuslineCommand(settings) == "ccstatus"
+}
+
+// HasStatuslineObject checks if a statusLine object exists in settings
+func HasStatuslineObject(settings Settings) bool {
+	_, ok := settings[StatusLineKey]
+	return ok
+}
+
+// GetStatuslineObject returns the full statusLine object if it exists
+func GetStatuslineObject(settings Settings) map[string]any {
+	statusline, ok := settings[StatusLineKey]
+	if !ok {
+		return nil
+	}
+
+	statuslineMap, ok := statusline.(map[string]any)
+	if !ok {
+		return nil
+	}
+
+	return statuslineMap
 }

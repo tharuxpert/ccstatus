@@ -9,6 +9,7 @@ import (
 
 	"ccstatus/internal/config"
 	"ccstatus/internal/statusline"
+	"ccstatus/internal/ui"
 
 	"github.com/spf13/cobra"
 )
@@ -35,8 +36,11 @@ type checkResult struct {
 }
 
 func runDoctor(cmd *cobra.Command, args []string) error {
-	fmt.Println("ccstatus doctor")
-	fmt.Println()
+	ui.CompactTitle("ccstatus doctor")
+
+	// Run all checks with spinners
+	s := ui.NewSpinner("Running diagnostics...")
+	s.Start()
 
 	checks := []checkResult{
 		checkConfigExists(),
@@ -46,34 +50,47 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		checkAPIEndpoint(),
 	}
 
-	// Print results
-	allOK := true
-	for _, check := range checks {
-		statusIcon := "[OK]"
-		if !check.ok {
-			statusIcon = "[!!]"
-			allOK = false
-		}
+	s.Stop()
 
-		fmt.Printf("  %s %s\n", statusIcon, check.name)
-		if check.message != "" {
-			fmt.Printf("      %s\n", check.message)
+	// Print results
+	fmt.Println()
+	ui.Bold.Println("  Diagnostics")
+	ui.Divider()
+	fmt.Println()
+
+	passCount := 0
+	failCount := 0
+
+	for _, check := range checks {
+		if check.ok {
+			ui.StatusOK(check.name, check.message)
+			passCount++
+		} else {
+			ui.StatusError(check.name, check.message)
+			failCount++
 		}
+	}
+
+	// Summary
+	fmt.Println()
+	ui.Divider()
+
+	if failCount == 0 {
+		ui.SuccessMessage("All checks passed!", "ccstatus is ready to use.")
+	} else {
+		ui.ErrorMessage(
+			fmt.Sprintf("%d of %d checks failed", failCount, len(checks)),
+			"",
+		)
+		fmt.Println()
+		ui.Bold.Println("  Quick fixes:")
+		fmt.Println()
+		ui.Bullet("Run " + ui.InfoBold.Sprint("ccstatus install") + " to configure the statusline")
+		ui.Bullet("Ensure ccstatus is in your PATH")
+		ui.Bullet("Sign in to Claude Code to generate OAuth credentials")
 	}
 
 	fmt.Println()
-
-	if allOK {
-		fmt.Println("All checks passed. ccstatus is ready to use.")
-	} else {
-		fmt.Println("Some checks failed. See above for details.")
-		fmt.Println()
-		fmt.Println("Common fixes:")
-		fmt.Println("  - Run 'ccstatus install' to configure the statusline")
-		fmt.Println("  - Ensure ccstatus is in your PATH")
-		fmt.Println("  - Sign in to Claude Code to generate OAuth credentials")
-	}
-
 	return nil
 }
 
@@ -98,7 +115,7 @@ func checkConfigExists() checkResult {
 
 	if !exists {
 		result.ok = false
-		result.message = fmt.Sprintf("Config not found at %s", configPath)
+		result.message = fmt.Sprintf("Not found at %s", configPath)
 		return result
 	}
 
@@ -123,24 +140,24 @@ func checkStatuslineConfigured() checkResult {
 
 	if cmd == "" {
 		result.ok = false
-		result.message = "No statusline configured. Run 'ccstatus install' to set up."
+		result.message = "Not configured"
 		return result
 	}
 
 	if cmd != "ccstatus" {
 		result.ok = false
-		result.message = fmt.Sprintf("Different command configured: %s", cmd)
+		result.message = fmt.Sprintf("Different command: %s", cmd)
 		return result
 	}
 
 	result.ok = true
-	result.message = "ccstatus is configured"
+	result.message = "ccstatus"
 	return result
 }
 
 func checkBinaryInPath() checkResult {
 	result := checkResult{
-		name: "ccstatus in PATH",
+		name: "Binary in PATH",
 	}
 
 	path, err := exec.LookPath("ccstatus")
@@ -163,33 +180,33 @@ func checkOAuthToken() checkResult {
 	token, err := statusline.GetAccessToken()
 	if err != nil {
 		result.ok = false
-		result.message = fmt.Sprintf("Cannot retrieve token: %v", err)
+		result.message = fmt.Sprintf("Cannot retrieve: %v", err)
 		return result
 	}
 
 	if token == "" {
 		result.ok = false
-		result.message = "Token is empty. Sign in to Claude Code."
+		result.message = "Empty token - sign in to Claude Code"
 		return result
 	}
 
 	// Mask token for display
 	maskedToken := token[:8] + "..." + token[len(token)-4:]
 	result.ok = true
-	result.message = fmt.Sprintf("Found (%s)", maskedToken)
+	result.message = maskedToken
 	return result
 }
 
 func checkAPIEndpoint() checkResult {
 	result := checkResult{
-		name: "Anthropic API endpoint",
+		name: "Anthropic API",
 	}
 
 	// First check if we have a token
 	token, err := statusline.GetAccessToken()
 	if err != nil || token == "" {
 		result.ok = false
-		result.message = "Skipped (no OAuth token available)"
+		result.message = "Skipped (no token)"
 		return result
 	}
 
@@ -198,7 +215,7 @@ func checkAPIEndpoint() checkResult {
 	req, err := http.NewRequest("GET", "https://api.anthropic.com/api/oauth/usage", nil)
 	if err != nil {
 		result.ok = false
-		result.message = fmt.Sprintf("Cannot create request: %v", err)
+		result.message = fmt.Sprintf("Request error: %v", err)
 		return result
 	}
 
@@ -207,31 +224,30 @@ func checkAPIEndpoint() checkResult {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		// Check if it's a network error vs other error
 		if os.IsTimeout(err) {
 			result.ok = false
 			result.message = "Request timed out"
 			return result
 		}
 		result.ok = false
-		result.message = fmt.Sprintf("Cannot reach API: %v", err)
+		result.message = fmt.Sprintf("Connection failed: %v", err)
 		return result
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == 401 {
 		result.ok = false
-		result.message = "Token rejected (401). Try signing in to Claude Code again."
+		result.message = "Token rejected (401)"
 		return result
 	}
 
 	if resp.StatusCode != 200 {
 		result.ok = false
-		result.message = fmt.Sprintf("Unexpected status: %d", resp.StatusCode)
+		result.message = fmt.Sprintf("HTTP %d", resp.StatusCode)
 		return result
 	}
 
 	result.ok = true
-	result.message = "Reachable (status 200)"
+	result.message = "Reachable"
 	return result
 }
