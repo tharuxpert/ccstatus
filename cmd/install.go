@@ -31,7 +31,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	// Step 1: Check configuration
 	s := ui.NewSpinner("Detecting Claude Code configuration...")
 	s.Start()
-	time.Sleep(300 * time.Millisecond) // Brief pause for visual feedback
+	time.Sleep(1200 * time.Millisecond) // Brief pause for visual feedback
 
 	configPath, err := config.GetConfigPath()
 	if err != nil {
@@ -65,7 +65,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	// Step 2: Read current settings
 	s = ui.NewSpinner("Reading current settings...")
 	s.Start()
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(1 * time.Second)
 
 	settings, err := config.ReadSettings()
 	if err != nil {
@@ -144,7 +144,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	if exists {
 		s = ui.NewProgressSpinner("Creating backup...")
 		s.Start()
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(1200 * time.Millisecond)
 
 		backupPath, err := config.CreateBackup()
 		if err != nil {
@@ -160,7 +160,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	// Step 7: Update settings
 	s = ui.NewProgressSpinner("Updating configuration...")
 	s.Start()
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(1200 * time.Millisecond)
 
 	config.SetStatuslineCommand(settings, "ccstatus")
 

@@ -30,7 +30,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	// Step 1: Check configuration
 	s := ui.NewSpinner("Checking current configuration...")
 	s.Start()
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(1200 * time.Millisecond)
 
 	exists, err := config.ConfigExists()
 	if err != nil {
@@ -87,7 +87,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	// Step 3: Check for backups
 	s = ui.NewSpinner("Checking for backups...")
 	s.Start()
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(1 * time.Second)
 
 	backupPath, backupErr := config.GetLatestBackup()
 
@@ -152,7 +152,7 @@ func restoreFromBackupStyled(backupPath string) error {
 	fmt.Println()
 	s := ui.NewProgressSpinner("Restoring from backup...")
 	s.Start()
-	time.Sleep(400 * time.Millisecond)
+	time.Sleep(1500 * time.Millisecond)
 
 	if err := config.RestoreFromBackup(backupPath); err != nil {
 		s.Stop()
@@ -181,7 +181,7 @@ func removeStatuslineStyled(settings config.Settings) error {
 	// Create backup before removing
 	s := ui.NewProgressSpinner("Creating safety backup...")
 	s.Start()
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(1200 * time.Millisecond)
 
 	backupPath, err := config.CreateBackup()
 	if err != nil {
@@ -199,7 +199,7 @@ func removeStatuslineStyled(settings config.Settings) error {
 	// Remove statusline config
 	s = ui.NewProgressSpinner("Removing statusline configuration...")
 	s.Start()
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(1200 * time.Millisecond)
 
 	config.RemoveStatusline(settings)
 
