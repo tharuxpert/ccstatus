@@ -16,7 +16,7 @@ var versionCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println()
 		ui.Primary.Printf("  ccstatus ")
-		ui.Bold.Printf("v%s\n", Version)
+		ui.Bold.Printf("v%s\n", GetVersion())
 		ui.Dim.Printf("  %s/%s\n", runtime.GOOS, runtime.GOARCH)
 		fmt.Println()
 	},

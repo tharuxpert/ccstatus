@@ -38,30 +38,54 @@ type checkResult struct {
 func runDoctor(cmd *cobra.Command, args []string) error {
 	ui.CompactTitle("ccstatus doctor")
 
-	// Run all checks with spinners
-	s := ui.NewSpinner("Running diagnostics...")
-	s.Start()
-
-	checks := []checkResult{
-		checkConfigExists(),
-		checkStatuslineConfigured(),
-		checkBinaryInPath(),
-		checkOAuthToken(),
-		checkAPIEndpoint(),
-	}
-
-	s.Stop()
-
-	// Print results
 	fmt.Println()
 	ui.Bold.Println("  Diagnostics")
 	ui.Divider()
 	fmt.Println()
 
+	// Define all checks with their names
+	checkFuncs := []struct {
+		name string
+		fn   func() checkResult
+	}{
+		{"Claude Code configuration", checkConfigExists},
+		{"Statusline configuration", checkStatuslineConfigured},
+		{"Binary in PATH", checkBinaryInPath},
+		{"OAuth token", checkOAuthToken},
+		{"Anthropic API", checkAPIEndpoint},
+	}
+
+	checks := make([]checkResult, 0, len(checkFuncs))
 	passCount := 0
 	failCount := 0
 
-	for _, check := range checks {
+	// Run each check with its own spinner
+	for _, checkDef := range checkFuncs {
+		s := ui.NewSpinner(checkDef.name)
+		s.Start()
+		// Give spinner time to render
+		time.Sleep(100 * time.Millisecond)
+		
+		// Run the check in a goroutine and track when it completes
+		checkChan := make(chan checkResult, 1)
+		startTime := time.Now()
+		
+		go func() {
+			checkChan <- checkDef.fn()
+		}()
+		
+		// Wait for check to complete
+		check := <-checkChan
+		elapsed := time.Since(startTime)
+		
+		// Ensure spinner is visible for at least 300ms
+		if elapsed < 300*time.Millisecond {
+			time.Sleep(300*time.Millisecond - elapsed)
+		}
+		
+		s.Stop()
+
+		// Print result immediately
 		if check.ok {
 			ui.StatusOK(check.name, check.message)
 			passCount++
@@ -69,6 +93,8 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 			ui.StatusError(check.name, check.message)
 			failCount++
 		}
+
+		checks = append(checks, check)
 	}
 
 	// Summary
