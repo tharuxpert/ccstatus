@@ -71,6 +71,10 @@ This tells Claude Code to execute ccstatus and display its output in the statusl
 - No telemetry or tracking
 - No data is sent to third parties
 
+## Feedback & Ideas
+
+💬 Feedback & ideas: https://github.com/tharuxpert/ccstatus/discussions
+
 ## License
 
 MIT
