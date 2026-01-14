@@ -114,6 +114,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		ui.Bullet("Run " + ui.InfoBold.Sprint("ccstatus install") + " to configure the statusline")
 		ui.Bullet("Ensure ccstatus is in your PATH")
 		ui.Bullet("Sign in to Claude Code to generate OAuth credentials")
+		ui.Bullet("If API fails, run " + ui.InfoBold.Sprint("claude") + " once to refresh the token")
 	}
 
 	fmt.Println()
@@ -263,7 +264,7 @@ func checkAPIEndpoint() checkResult {
 
 	if resp.StatusCode == 401 {
 		result.ok = false
-		result.message = "Token rejected (401)"
+		result.message = "Token rejected (401) - run 'claude' once to refresh"
 		return result
 	}
 
