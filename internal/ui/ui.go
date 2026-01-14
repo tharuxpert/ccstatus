@@ -65,16 +65,17 @@ var (
 
 // Icons
 const (
-	IconCheck    = "\u2714" // ✔
-	IconCross    = "\u2718" // ✘
-	IconWarning  = "\u26A0" // ⚠
-	IconInfo     = "\u2139" // ℹ
-	IconArrow    = "\u2192" // →
-	IconBullet   = "\u2022" // •
-	IconStar     = "\u2605" // ★
-	IconBox      = "\u25A0" // ■
-	IconCircle   = "\u25CF" // ●
-	IconDiamond  = "\u25C6" // ◆
+	IconCheck     = "\u2714" // ✔
+	IconCross     = "\u2718" // ✘
+	IconWarning   = "\u26A0" // ⚠
+	IconInfo      = "\u2139" // ℹ
+	IconArrow     = "\u2192" // →
+	IconBullet    = "\u2022" // •
+	IconStar      = "\u2605" // ★
+	IconBox       = "\u25A0" // ■
+	IconCircle    = "\u25CF" // ●
+	IconDiamond   = "\u25C6" // ◆
+	IconGitBranch = "\u2387" // ⎇
 )
 
 // Header prints a styled header

@@ -12,6 +12,9 @@ import (
 	"time"
 
 	"ccstatus/internal/config"
+	"ccstatus/internal/ui"
+
+	"github.com/fatih/color"
 )
 
 // Input represents the JSON input from Claude Code
@@ -45,6 +48,9 @@ type UsageResponse struct {
 
 // Run executes the statusline logic and prints output to stdout.
 func Run() {
+	// Force colors on since statusline is displayed in a terminal context
+	color.NoColor = false
+
 	// Load configuration
 	cfg, _ := config.LoadCCStatusConfig()
 
@@ -221,59 +227,91 @@ func getGitBranch() string {
 	return strings.TrimSpace(string(output))
 }
 
+// Color definitions for statusline
+var (
+	modelColor   = color.New(color.FgCyan, color.Bold)
+	branchColor  = color.New(color.FgMagenta)
+	dimColor     = color.New(color.Faint)
+	sepColor     = color.New(color.Faint)
+	greenColor   = color.New(color.FgGreen)
+	yellowColor  = color.New(color.FgYellow)
+	redColor     = color.New(color.FgRed)
+)
+
+// getUsageColor returns the appropriate color based on usage percentage
+// Green when low (plenty left), yellow in middle, red when high (running out)
+func getUsageColor(pct int) *color.Color {
+	if pct >= 70 {
+		return redColor
+	} else if pct >= 40 {
+		return yellowColor
+	}
+	return greenColor
+}
+
 // printFallback prints the statusline with placeholder values
 func printFallback(model string, cfg *config.CCStatusConfig) {
-	parts := []string{model}
+	modelColor.Print(model)
 
 	if cfg.ShowGitBranch {
 		if branch := getGitBranch(); branch != "" {
-			parts = append(parts, branch)
+			sepColor.Print(" | ")
+			branchColor.Printf("%s %s", ui.IconGitBranch, branch)
 		}
 	}
 
 	if cfg.ShowSessionUsage {
-		parts = append(parts, "Session: --%")
+		sepColor.Print(" | ")
+		dimColor.Print("Session: --%")
 	}
 
 	if cfg.ShowWeeklyUsage {
-		parts = append(parts, "Week: --%")
+		sepColor.Print(" | ")
+		dimColor.Print("Week: --%")
 	}
-
-	fmt.Print(strings.Join(parts, " | "))
 }
 
 // printStatusLine formats and prints the full statusline
 func printStatusLine(model string, usage *UsageResponse, cfg *config.CCStatusConfig) {
-	parts := []string{model}
+	modelColor.Print(model)
 
 	// Git branch
 	if cfg.ShowGitBranch {
 		if branch := getGitBranch(); branch != "" {
-			parts = append(parts, branch)
+			sepColor.Print(" | ")
+			branchColor.Printf("%s %s", ui.IconGitBranch, branch)
 		}
 	}
 
 	// Session usage
 	if cfg.ShowSessionUsage {
+		sepColor.Print(" | ")
 		sessionPct := int(usage.FiveHour.Utilization)
+		usageColor := getUsageColor(sessionPct)
 		if cfg.ShowResetTimes {
 			sessionReset := formatResetTime(usage.FiveHour.ResetsAt)
-			parts = append(parts, fmt.Sprintf("Session: %d%% (resets %s)", sessionPct, sessionReset))
+			fmt.Print("Session: ")
+			usageColor.Printf("%d%%", sessionPct)
+			dimColor.Printf(" (resets %s)", sessionReset)
 		} else {
-			parts = append(parts, fmt.Sprintf("Session: %d%%", sessionPct))
+			fmt.Print("Session: ")
+			usageColor.Printf("%d%%", sessionPct)
 		}
 	}
 
 	// Weekly usage
 	if cfg.ShowWeeklyUsage {
+		sepColor.Print(" | ")
 		weeklyPct := int(usage.SevenDay.Utilization)
+		usageColor := getUsageColor(weeklyPct)
 		if cfg.ShowResetTimes {
 			weeklyReset := formatWeeklyResetTime(usage.SevenDay.ResetsAt)
-			parts = append(parts, fmt.Sprintf("Week: %d%% (resets %s)", weeklyPct, weeklyReset))
+			fmt.Print("Week: ")
+			usageColor.Printf("%d%%", weeklyPct)
+			dimColor.Printf(" (resets %s)", weeklyReset)
 		} else {
-			parts = append(parts, fmt.Sprintf("Week: %d%%", weeklyPct))
+			fmt.Print("Week: ")
+			usageColor.Printf("%d%%", weeklyPct)
 		}
 	}
-
-	fmt.Print(strings.Join(parts, " | "))
 }
