@@ -46,23 +46,23 @@ var (
 			Bold(true)
 
 	toggleOffStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("8")). // Gray
-			Faint(true)
+			Foreground(lipgloss.Color("240")) // Dim gray
 
 	descStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("8")).
-			Faint(true)
+			Foreground(lipgloss.Color("252")). // Light gray - more visible
+			Italic(true)
 
 	dividerStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("8")).
-			Faint(true).
+			Foreground(lipgloss.Color("240")). // Medium gray
 			MarginTop(1).
 			MarginBottom(1)
 
 	helpStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("8")).
-			Faint(true).
+			Foreground(lipgloss.Color("246")). // Visible gray
 			MarginTop(1)
+
+	actionLabelStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("250")) // Light gray for unselected actions
 
 	saveStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("2")). // Green
@@ -250,10 +250,10 @@ func (m configModel) View() string {
 		saveCursor = selectedStyle.Render("→ ")
 		saveLabel = saveStyle.Render("Save changes")
 	} else {
-		saveLabel = descStyle.Render("Save changes")
+		saveLabel = actionLabelStyle.Render("Save changes")
 	}
 	if m.hasChanges {
-		b.WriteString(fmt.Sprintf("%s%s %s\n", saveCursor, saveLabel, descStyle.Render("(has changes)")))
+		b.WriteString(fmt.Sprintf("%s%s %s\n", saveCursor, saveLabel, helpStyle.Render("(has changes)")))
 	} else {
 		b.WriteString(fmt.Sprintf("%s%s\n", saveCursor, saveLabel))
 	}
@@ -265,7 +265,7 @@ func (m configModel) View() string {
 		cancelCursor = selectedStyle.Render("→ ")
 		cancelLabel = cancelStyle.Render("Cancel")
 	} else {
-		cancelLabel = descStyle.Render("Cancel")
+		cancelLabel = actionLabelStyle.Render("Cancel")
 	}
 	b.WriteString(fmt.Sprintf("%s%s\n", cancelCursor, cancelLabel))
 
