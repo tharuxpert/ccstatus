@@ -1,0 +1,23 @@
+project_name: ccstatus
+
+builds:
+  - binary: ccstatus
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+brews:
+  - name: ccstatus
+    homepage: https://github.com/tharuxpert/ccstatus
+    description: Claude Code statusline usage CLI
+    license: MIT
+
+    tap:
+      owner: tharuxpert
+      name: homebrew-ccstatus
+
+    install: |
+      bin.install "ccstatus"

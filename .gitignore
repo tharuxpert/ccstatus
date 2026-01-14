@@ -4,3 +4,5 @@ ccstatus
 *.log
 .DS_Store
 /dev
+# Added by goreleaser init:
+dist/
