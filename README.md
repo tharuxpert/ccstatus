@@ -1,5 +1,7 @@
 # ccstatus
 
+<img width="1024" height="500" alt="12" src="https://github.com/user-attachments/assets/d762d9e4-2c5f-47d5-b44b-a8c2f80288bc" />
+
 A CLI tool that shows Claude Code session and weekly usage in the statusline.
 
 ## Overview
@@ -16,6 +18,7 @@ brew install ccstatus
 ```
 
 ### Manual install from source
+
 
 Requires Go 1.21 or later.
 
