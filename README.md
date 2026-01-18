@@ -44,6 +44,7 @@ This command safely updates `~/.claude/settings.json` to add the statusline conf
 |---------|-------------|
 | `ccstatus install` | Configure ccstatus in Claude Code settings |
 | `ccstatus uninstall` | Remove ccstatus from Claude Code settings |
+| `ccstatus config` | Configure statusline display options |
 | `ccstatus doctor` | Run diagnostic checks on your configuration |
 | `ccstatus version` | Print the version number |
 
@@ -62,6 +63,17 @@ After running `ccstatus install`, the following entry is added to your Claude Co
 ```
 
 This tells Claude Code to execute ccstatus and display its output in the statusline.
+
+### Statusline Options
+
+Use `ccstatus config` to customize what information is displayed in the statusline. This interactive command allows you to toggle the following options:
+
+- **Session Usage**: Show current session usage percentage
+- **Weekly Usage**: Show weekly usage percentage
+- **Reset Times**: Show when usage limits reset
+- **Git Branch**: Show current git branch name
+
+Configuration is saved to `~/.claude/ccstatus.json` and takes effect immediately.
 
 ## Compatibility
 
