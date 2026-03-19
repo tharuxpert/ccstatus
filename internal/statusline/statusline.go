@@ -64,9 +64,14 @@ func Run() {
 		return
 	}
 
-	// Fetch usage data from Anthropic API
+	// Fetch usage data from Anthropic API (serves from cache if fresh)
 	usage, err := FetchUsage(token)
 	if err != nil || usage.Error != nil {
+		// API failed — try serving stale cache rather than showing dashes
+		if stale, ok := loadCacheIgnoringTTL(); ok {
+			printStatusLine(model, stale, cfg)
+			return
+		}
 		printFallback(model, cfg)
 		return
 	}
@@ -114,8 +119,13 @@ func GetAccessToken() (string, error) {
 	return creds.ClaudeAiOauth.AccessToken, nil
 }
 
-// FetchUsage retrieves usage data from the Anthropic API
+// FetchUsage retrieves usage data from the Anthropic API, using a local
+// cache to avoid hitting the API on every statusline refresh.
 func FetchUsage(token string) (*UsageResponse, error) {
+	if cached, ok := loadCache(); ok {
+		return cached, nil
+	}
+
 	req, err := http.NewRequest("GET", "https://api.anthropic.com/api/oauth/usage", nil)
 	if err != nil {
 		return nil, err
@@ -137,10 +147,16 @@ func FetchUsage(token string) (*UsageResponse, error) {
 		return nil, err
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API returned status %d", resp.StatusCode)
+	}
+
 	var usage UsageResponse
 	if err := json.Unmarshal(body, &usage); err != nil {
 		return nil, err
 	}
+
+	saveCache(&usage)
 
 	return &usage, nil
 }
