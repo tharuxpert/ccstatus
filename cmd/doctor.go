@@ -248,6 +248,7 @@ func checkAPIEndpoint() checkResult {
 
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("anthropic-beta", "oauth-2025-04-20")
+	req.Header.Set("User-Agent", "claude-code")
 
 	resp, err := client.Do(req)
 	if err != nil {

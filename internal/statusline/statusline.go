@@ -22,6 +22,7 @@ type Input struct {
 	Model struct {
 		DisplayName string `json:"display_name"`
 	} `json:"model"`
+	Version string `json:"version"`
 }
 
 // Credentials represents the OAuth credentials from Keychain
@@ -54,8 +55,12 @@ func Run() {
 	// Load configuration
 	cfg, _ := config.LoadCCStatusConfig()
 
-	// Read model info from stdin
-	model := readModelFromStdin()
+	// Read input from stdin
+	input := readInput()
+	model := input.Model.DisplayName
+	if model == "" {
+		model = "Unknown"
+	}
 
 	// Get OAuth token from macOS Keychain
 	token, err := GetAccessToken()
@@ -64,9 +69,14 @@ func Run() {
 		return
 	}
 
-	// Fetch usage data from Anthropic API
-	usage, err := FetchUsage(token)
+	// Fetch usage data from Anthropic API (serves from cache if fresh)
+	usage, err := FetchUsage(token, input.Version)
 	if err != nil || usage.Error != nil {
+		// API failed — try serving stale cache rather than showing dashes
+		if stale, ok := loadCacheIgnoringTTL(); ok {
+			printStatusLine(model, stale, cfg)
+			return
+		}
 		printFallback(model, cfg)
 		return
 	}
@@ -75,22 +85,19 @@ func Run() {
 	printStatusLine(model, usage, cfg)
 }
 
-// readModelFromStdin reads and parses the JSON input from stdin
-func readModelFromStdin() string {
+// readInput reads and parses the JSON input from stdin
+func readInput() Input {
 	data, err := io.ReadAll(os.Stdin)
 	if err != nil {
-		return "Unknown"
+		return Input{}
 	}
 
 	var input Input
 	if err := json.Unmarshal(data, &input); err != nil {
-		return "Unknown"
+		return Input{}
 	}
 
-	if input.Model.DisplayName == "" {
-		return "Unknown"
-	}
-	return input.Model.DisplayName
+	return input
 }
 
 // GetAccessToken retrieves the OAuth token from macOS Keychain
@@ -114,8 +121,13 @@ func GetAccessToken() (string, error) {
 	return creds.ClaudeAiOauth.AccessToken, nil
 }
 
-// FetchUsage retrieves usage data from the Anthropic API
-func FetchUsage(token string) (*UsageResponse, error) {
+// FetchUsage retrieves usage data from the Anthropic API, using a local
+// cache to avoid hitting the API on every statusline refresh.
+func FetchUsage(token string, ccVersion string) (*UsageResponse, error) {
+	if cached, ok := loadCache(); ok {
+		return cached, nil
+	}
+
 	req, err := http.NewRequest("GET", "https://api.anthropic.com/api/oauth/usage", nil)
 	if err != nil {
 		return nil, err
@@ -124,6 +136,11 @@ func FetchUsage(token string) (*UsageResponse, error) {
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("anthropic-beta", "oauth-2025-04-20")
+	if ccVersion != "" {
+		req.Header.Set("User-Agent", "claude-code/"+ccVersion)
+	} else {
+		req.Header.Set("User-Agent", "claude-code")
+	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
@@ -137,10 +154,16 @@ func FetchUsage(token string) (*UsageResponse, error) {
 		return nil, err
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API returned status %d", resp.StatusCode)
+	}
+
 	var usage UsageResponse
 	if err := json.Unmarshal(body, &usage); err != nil {
 		return nil, err
 	}
+
+	saveCache(&usage)
 
 	return &usage, nil
 }
