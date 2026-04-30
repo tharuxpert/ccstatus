@@ -33,9 +33,6 @@ var (
 			Foreground(lipgloss.Color("6")). // Cyan
 			MarginBottom(1)
 
-	itemStyle = lipgloss.NewStyle().
-			PaddingLeft(2)
-
 	selectedStyle = lipgloss.NewStyle().
 			PaddingLeft(0).
 			Foreground(lipgloss.Color("6")). // Cyan
@@ -63,6 +60,12 @@ var (
 
 	actionLabelStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("250")) // Light gray for unselected actions
+
+	inactiveToggleOnStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("64")) // Muted green
+
+	inactiveToggleOffStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("240")) // Dim gray
 
 	saveStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("2")). // Green
@@ -208,26 +211,35 @@ func (m configModel) View() string {
 	// Options
 	for i, opt := range m.options {
 		cursor := "  "
-		if m.cursor == i {
+		selected := m.cursor == i
+		if selected {
 			cursor = selectedStyle.Render("→ ")
 		}
 
 		// Toggle indicator
 		var toggle string
 		if opt.enabled {
-			toggle = toggleOnStyle.Render("● ON ")
+			if selected {
+				toggle = toggleOnStyle.Render("● ON")
+			} else {
+				toggle = inactiveToggleOnStyle.Render("● ON")
+			}
 		} else {
-			toggle = toggleOffStyle.Render("○ OFF")
+			if selected {
+				toggle = toggleOffStyle.Render("○ OFF")
+			} else {
+				toggle = inactiveToggleOffStyle.Render("○ OFF")
+			}
 		}
 
 		// Option label
-		label := opt.label
-		if m.cursor == i {
+		label := fmt.Sprintf("%-20s", opt.label)
+		if selected {
 			label = selectedStyle.Render(label)
 		}
 
 		// Build the line
-		line := fmt.Sprintf("%s%-20s %s", cursor, label, toggle)
+		line := fmt.Sprintf("%s%s %s", cursor, label, toggle)
 		b.WriteString(line)
 		b.WriteString("\n")
 	}
