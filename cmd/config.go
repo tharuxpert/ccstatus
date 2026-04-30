@@ -62,7 +62,7 @@ var (
 			MarginTop(1)
 
 	actionLabelStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("250")) // Light gray for unselected actions
+				Foreground(lipgloss.Color("250")) // Light gray for unselected actions
 
 	saveStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("2")). // Green
@@ -83,12 +83,12 @@ type configOption struct {
 
 // configModel is the bubbletea model for the config screen
 type configModel struct {
-	options       []configOption
-	cursor        int
-	originalCfg   *config.CCStatusConfig
-	saved         bool
-	cancelled     bool
-	hasChanges    bool
+	options     []configOption
+	cursor      int
+	originalCfg *config.CCStatusConfig
+	saved       bool
+	cancelled   bool
+	hasChanges  bool
 }
 
 func initialModel() (configModel, error) {
@@ -230,12 +230,14 @@ func (m configModel) View() string {
 		line := fmt.Sprintf("%s%-20s %s", cursor, label, toggle)
 		b.WriteString(line)
 		b.WriteString("\n")
+	}
 
-		// Description (shown for selected item)
-		if m.cursor == i {
-			b.WriteString(descStyle.Render(fmt.Sprintf("      %s", opt.description)))
-			b.WriteString("\n")
-		}
+	// Description for the selected toggle option. Keep it outside the menu rows
+	// so navigation does not change the shape of the item list.
+	b.WriteString("\n")
+	if m.cursor < len(m.options) {
+		b.WriteString(descStyle.Render("  " + m.options[m.cursor].description))
+		b.WriteString("\n")
 	}
 
 	// Divider before actions
