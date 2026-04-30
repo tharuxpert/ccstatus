@@ -47,8 +47,15 @@ This command safely updates `~/.claude/settings.json` to add the statusline conf
 | `ccstatus config` | Configure statusline display options |
 | `ccstatus doctor` | Run diagnostic checks on your configuration |
 | `ccstatus version` | Print the version number |
+| `ccstatus --version` | Print the version number |
 
 Note: Running `ccstatus` without arguments outputs statusline data. This is intended to be called by Claude Code and will not produce meaningful output in a normal terminal session.
+
+## Release
+
+Releases are published by GoReleaser when a `v*` tag is pushed. The workflow builds release artifacts, injects the tagged version into the binary, and updates the `tharuxpert/homebrew-ccstatus` tap.
+
+The release workflow requires a `TAP_GITHUB_TOKEN` repository secret with write access to `tharuxpert/homebrew-ccstatus`.
 
 ## Configuration
 

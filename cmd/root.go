@@ -3,33 +3,17 @@ package cmd
 
 import (
 	"os"
-	"os/exec"
-	"strings"
 
 	"ccstatus/internal/statusline"
 
 	"github.com/spf13/cobra"
 )
 
-// GetVersion returns the version string from git tags
-func GetVersion() string {
-	cmd := exec.Command("git", "describe", "--tags", "--always", "--dirty")
-	output, err := cmd.Output()
-	if err == nil {
-		version := strings.TrimSpace(string(output))
-		// Remove 'v' prefix if present, we'll add it back in the output
-		version = strings.TrimPrefix(version, "v")
-		if version != "" {
-			return version
-		}
-	}
-	return "dev"
-}
-
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "ccstatus",
-	Short: "Claude Code statusline utility",
+	Use:     "ccstatus",
+	Short:   "Claude Code statusline utility",
+	Version: DisplayVersion(),
 	Long: `ccstatus is a statusline utility for Claude Code.
 
 When run without arguments, it outputs the current usage status
@@ -63,6 +47,7 @@ func init() {
 		Use:    "no-help",
 		Hidden: true,
 	})
+	rootCmd.SetVersionTemplate("ccstatus {{.Version}}\n")
 
 	// Add subcommands
 	rootCmd.AddCommand(installCmd)
