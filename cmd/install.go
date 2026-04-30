@@ -107,15 +107,17 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 	if currentCmd != "" {
 		// Another command is configured, show replacement
-		ui.Step(stepNum, fmt.Sprintf("Update statusLine.command: %s %s %s",
+		ui.Step(stepNum, fmt.Sprintf("Update statusLine.type and statusLine.command: %s %s %s",
 			ui.Error.Sprint(currentCmd),
 			ui.Dim.Sprint(ui.IconArrow),
 			ui.Success.Sprint("ccstatus")))
 	} else if config.HasStatuslineObject(settings) {
 		// statusLine exists but command is empty/missing
-		ui.Step(stepNum, "Set statusLine.command:")
+		ui.Step(stepNum, "Set statusLine.type and statusLine.command:")
 		fmt.Println()
 		ui.Dim.Println("     Existing statusLine object will be preserved.")
+		ui.Dim.Print("     Setting: ")
+		ui.Info.Println("\"type\": \"command\"")
 		ui.Dim.Print("     Setting: ")
 		ui.Info.Println("\"command\": \"ccstatus\"")
 	} else {
@@ -124,6 +126,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		fmt.Println()
 		preview := map[string]any{
 			"statusLine": map[string]string{
+				"type":    "command",
 				"command": "ccstatus",
 			},
 		}

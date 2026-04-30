@@ -19,11 +19,12 @@ brew install ccstatus
 
 ### Manual install from source
 
-
-Requires Go 1.21 or later.
+Requires Go 1.25.5 or later.
 
 ```bash
-go install github.com/tharuxpert/ccstatus@latest
+git clone https://github.com/tharuxpert/ccstatus.git
+cd ccstatus
+go install .
 ```
 
 ## Setup
@@ -63,7 +64,8 @@ After running `ccstatus install`, the following entry is added to your Claude Co
 
 ```json
 {
-  "statusline": {
+  "statusLine": {
+    "type": "command",
     "command": "ccstatus"
   }
 }
