@@ -65,24 +65,24 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		s.Start()
 		// Give spinner time to render
 		time.Sleep(100 * time.Millisecond)
-		
+
 		// Run the check in a goroutine and track when it completes
 		checkChan := make(chan checkResult, 1)
 		startTime := time.Now()
-		
+
 		go func() {
 			checkChan <- checkDef.fn()
 		}()
-		
+
 		// Wait for check to complete
 		check := <-checkChan
 		elapsed := time.Since(startTime)
-		
+
 		// Ensure spinner is visible for at least 300ms
 		if elapsed < 300*time.Millisecond {
 			time.Sleep(300*time.Millisecond - elapsed)
 		}
-		
+
 		s.Stop()
 
 		// Print result immediately
@@ -248,6 +248,7 @@ func checkAPIEndpoint() checkResult {
 
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("anthropic-beta", "oauth-2025-04-20")
+	req.Header.Set("User-Agent", "claude-code")
 
 	resp, err := client.Do(req)
 	if err != nil {

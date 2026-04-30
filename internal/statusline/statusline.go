@@ -22,6 +22,7 @@ type Input struct {
 	Model struct {
 		DisplayName string `json:"display_name"`
 	} `json:"model"`
+	Version string `json:"version"`
 }
 
 // Credentials represents the OAuth credentials from Keychain
@@ -54,8 +55,12 @@ func Run() {
 	// Load configuration
 	cfg, _ := config.LoadCCStatusConfig()
 
-	// Read model info from stdin
-	model := readModelFromStdin()
+	// Read session input from stdin
+	input := readInputFromStdin()
+	model := input.Model.DisplayName
+	if model == "" {
+		model = "Unknown"
+	}
 
 	// Get OAuth token from macOS Keychain
 	token, err := GetAccessToken()
@@ -65,8 +70,12 @@ func Run() {
 	}
 
 	// Fetch usage data from Anthropic API
-	usage, err := FetchUsage(token)
-	if err != nil || usage.Error != nil {
+	usage, err := FetchUsage(token, input.Version)
+	if err != nil || usage == nil || usage.Error != nil {
+		if staleUsage, ok := loadStaleCache(); ok {
+			printStatusLine(model, staleUsage, cfg)
+			return
+		}
 		printFallback(model, cfg)
 		return
 	}
@@ -75,22 +84,18 @@ func Run() {
 	printStatusLine(model, usage, cfg)
 }
 
-// readModelFromStdin reads and parses the JSON input from stdin
-func readModelFromStdin() string {
+// readInputFromStdin reads and parses the JSON input from stdin.
+func readInputFromStdin() Input {
 	data, err := io.ReadAll(os.Stdin)
 	if err != nil {
-		return "Unknown"
+		return Input{}
 	}
 
 	var input Input
 	if err := json.Unmarshal(data, &input); err != nil {
-		return "Unknown"
+		return Input{}
 	}
-
-	if input.Model.DisplayName == "" {
-		return "Unknown"
-	}
-	return input.Model.DisplayName
+	return input
 }
 
 // GetAccessToken retrieves the OAuth token from macOS Keychain
@@ -114,8 +119,12 @@ func GetAccessToken() (string, error) {
 	return creds.ClaudeAiOauth.AccessToken, nil
 }
 
-// FetchUsage retrieves usage data from the Anthropic API
-func FetchUsage(token string) (*UsageResponse, error) {
+// FetchUsage retrieves usage data from the Anthropic API.
+func FetchUsage(token, claudeCodeVersion string) (*UsageResponse, error) {
+	if usage, ok := loadCache(); ok {
+		return usage, nil
+	}
+
 	req, err := http.NewRequest("GET", "https://api.anthropic.com/api/oauth/usage", nil)
 	if err != nil {
 		return nil, err
@@ -124,6 +133,7 @@ func FetchUsage(token string) (*UsageResponse, error) {
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("anthropic-beta", "oauth-2025-04-20")
+	req.Header.Set("User-Agent", claudeCodeUserAgent(claudeCodeVersion))
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
@@ -137,12 +147,25 @@ func FetchUsage(token string) (*UsageResponse, error) {
 		return nil, err
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API returned status %d", resp.StatusCode)
+	}
+
 	var usage UsageResponse
 	if err := json.Unmarshal(body, &usage); err != nil {
 		return nil, err
 	}
 
+	saveCache(&usage)
+
 	return &usage, nil
+}
+
+func claudeCodeUserAgent(version string) string {
+	if version == "" {
+		return "claude-code"
+	}
+	return "claude-code/" + version
 }
 
 // formatResetTime converts an ISO timestamp to local 12-hour format (e.g., "3:45pm")
@@ -229,13 +252,13 @@ func getGitBranch() string {
 
 // Color definitions for statusline
 var (
-	modelColor   = color.New(color.FgCyan, color.Bold)
-	branchColor  = color.New(color.FgMagenta)
-	dimColor     = color.New(color.Faint)
-	sepColor     = color.New(color.Faint)
-	greenColor   = color.New(color.FgGreen)
-	yellowColor  = color.New(color.FgYellow)
-	redColor     = color.New(color.FgRed)
+	modelColor  = color.New(color.FgCyan, color.Bold)
+	branchColor = color.New(color.FgMagenta)
+	dimColor    = color.New(color.Faint)
+	sepColor    = color.New(color.Faint)
+	greenColor  = color.New(color.FgGreen)
+	yellowColor = color.New(color.FgYellow)
+	redColor    = color.New(color.FgRed)
 )
 
 // getUsageColor returns the appropriate color based on usage percentage

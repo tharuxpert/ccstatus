@@ -235,6 +235,7 @@ func SetStatuslineCommand(settings Settings, command string) {
 	if !ok {
 		// No statusLine object exists, create one
 		settings[StatusLineKey] = map[string]any{
+			"type":    "command",
 			"command": command,
 		}
 		return
@@ -245,16 +246,18 @@ func SetStatuslineCommand(settings Settings, command string) {
 	if !ok {
 		// statusLine exists but is not a map, replace it
 		settings[StatusLineKey] = map[string]any{
+			"type":    "command",
 			"command": command,
 		}
 		return
 	}
 
-	// Update only the command field, preserving other fields
+	// Update the type and command fields, preserving other fields
+	statuslineMap["type"] = "command"
 	statuslineMap["command"] = command
 }
 
-// RemoveStatusline removes only the command from statusLine configuration
+// RemoveStatusline removes the ccstatus command fields from statusLine configuration
 // It preserves other statusLine settings; removes the object entirely if empty
 func RemoveStatusline(settings Settings) {
 	statusline, ok := settings[StatusLineKey]
@@ -269,8 +272,9 @@ func RemoveStatusline(settings Settings) {
 		return
 	}
 
-	// Remove only the command key
+	// Remove the command and type keys
 	delete(statuslineMap, "command")
+	delete(statuslineMap, "type")
 
 	// If statusLine object is now empty, remove it entirely
 	if len(statuslineMap) == 0 {
