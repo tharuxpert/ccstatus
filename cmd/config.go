@@ -58,6 +58,9 @@ var (
 			Foreground(lipgloss.Color("246")). // Visible gray
 			MarginTop(1)
 
+	inlineHelpStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("246")) // Visible gray
+
 	actionLabelStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("250")) // Light gray for unselected actions
 
@@ -266,11 +269,12 @@ func (m configModel) View() string {
 	} else {
 		saveLabel = actionLabelStyle.Render("Save changes")
 	}
+	saveLine := fmt.Sprintf("%s%s", saveCursor, saveLabel)
 	if m.hasChanges {
-		b.WriteString(fmt.Sprintf("%s%s %s\n", saveCursor, saveLabel, helpStyle.Render("(has changes)")))
-	} else {
-		b.WriteString(fmt.Sprintf("%s%s\n", saveCursor, saveLabel))
+		saveLine += " " + inlineHelpStyle.Render("(has changes)")
 	}
+	b.WriteString(saveLine)
+	b.WriteString("\n")
 
 	// Cancel option
 	cancelCursor := "  "

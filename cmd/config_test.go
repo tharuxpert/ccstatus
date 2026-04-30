@@ -92,3 +92,31 @@ func TestConfigViewKeepsToggleColumnAligned(t *testing.T) {
 		t.Fatalf("expected toggle column to stay aligned, got %v", toggleColumns)
 	}
 }
+
+func TestConfigViewShowsHasChangesOnSaveLine(t *testing.T) {
+	model := configModel{
+		options: []configOption{
+			{
+				key:         "session",
+				label:       "Session Usage",
+				description: "Show current session usage percentage",
+				enabled:     true,
+			},
+		},
+		cursor:      1,
+		originalCfg: config.DefaultCCStatusConfig(),
+		hasChanges:  true,
+	}
+
+	lines := strings.Split(stripANSI(model.View()), "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "Save changes") {
+			if !strings.Contains(line, "(has changes)") {
+				t.Fatalf("expected save line to include change marker, got %q", line)
+			}
+			return
+		}
+	}
+
+	t.Fatalf("expected save line in view:\n%s", model.View())
+}
